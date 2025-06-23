@@ -1,0 +1,148 @@
+
+## 🔹 Technical Questionnaire – **Data Analyst (Data Science Competence)**
+
+> **Instructions:** Please complete the questions below. Include code snippets in Python/SQL where applicable and clearly explain your approach.
+
+---
+
+### **Section A: SQL & Exploratory Data Analysis**
+
+1. **SQL Task:**
+   You have a table `events` with:
+
+   * `user_id` (STRING)
+   * `event_type` (STRING)
+   * `event_timestamp` (TIMESTAMP)
+
+   **Write a query to find the number of unique users who triggered both a `signup` and a `purchase` event within 7 days.**
+
+-- Answer:
+
+   Select DISTINCT (COUNT user_id) FROM events 
+   WHERE
+      1=1
+      AND event_type IN ('signup', 'purchase')
+      AND event_timestamp >= DATEADD(DAY, -7, GETDATE()) -- using getdate() to use based on current_date, when dashboard is showing the number it will be automated updated
+
+-- end here
+
+
+2. **Exploratory Analysis:**
+   Given a dataset with customer transactions, how would you identify:
+
+   * High-value customers?
+   * Seasonality trends?
+
+-- My answer :
+   
+   There are few ways that we can segmentize this customer to identify high-value customers or seasonility trends. 
+
+   Let's tackle high-value customers first. The approach that I will use would be Recency, Frequency & Monetary (RFM). This RFM will be depends on 3 newly created column that we will be feature engineered based 
+   on customer transactions. 
+      Recency -> How recent customer interacted, purchased or subscribe to us.
+      Frequency -> The volume of customers transactions and purchased within a month/ last 6 Month / Last 12 Month
+      Monetary -> The amount of money that the customers have spend with us.
+   
+   With the RFM, we can measure high-value customners using RFM scoring. The weightage of the scoring would be based on the Frequency (40%) Recency (40%) and Monetary (20%). The reason of the weightage given like that is because we want high value customers that are well engaged with us and provide us with high volume of transactions/conversions. This weightage can be readjust based on the needs of marketing/CLM team as well. This is how diverse RFM can be use.
+
+   Seasonility trends, usually can be quite straightforward. Having a dataset with customer transactions, you can pivot it into monthly transaction by years. By comparing Same Period Last Year (SPLY) of the same month with current month will help to prove to business units regarding the seasonility trends either surpisingly jump or decline. Moreover, seasonility can be related to outside variable such as festive, school holiday and government new policies (recently, government imposed no selling ciggarettes within the radius of xxkm twithin the school)
+
+
+-- end here
+
+### **Section B: Python & Modeling**
+
+3. **Python Task:**
+   You're given a dataset with features: `user_id`, `last_login_days_ago`, `num_purchases`, `avg_purchase_value`, and a binary target `churned`.
+
+   * Write Python code to prepare this data for a logistic regression model.
+   * Briefly explain how you'd evaluate the model performance.
+
+
+# -- code -------------------------------------------------------------------------------------
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+
+# Assign my dataset to DF 
+# df = pd.read_csv("user_ga_details.csv")  # I will load my data here
+
+# Drop non-numeric or identifier columns
+X = df.drop(columns=['user_id', 'churned'])  # Features
+y = df['churned']                            # Target
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize features for logistic regression
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Fit logistic regression model
+model = LogisticRegression()
+model.fit(X_train_scaled, y_train)
+
+# Predict
+y_pred = model.predict(X_test_scaled)
+y_proba = model.predict_proba(X_test_scaled)[:, 1]
+
+# Confusion matrix and classification metrics
+print(confusion_matrix(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+
+# ROC-AUC Score
+roc_auc = roc_auc_score(y_test, y_proba)
+print(f"ROC-AUC Score: {roc_auc:.2f}")
+
+# ------------------------------------------
+How I will explain my code here:
+
+1. Confusion Matrix - Breaks down predictions into four categories :
+
+True Positive (TP): Predicted churned and actually churned
+
+False Positive (FP): Predicted churned but didn’t churn
+
+True Negative (TN): Predicted not churned and didn’t churn
+
+False Negative (FN): Predicted not churned but actually churned
+
+# My model will be consider good if it have high TP and TN and low FP and FN.   
+
+2. Accuracy / Precision / F1-score: Evaluate balance between false positives and false negatives
+
+   # Formula -> Accuracy = (TP + TN) / (TP + FP + TN + FN) -- Will let me know that how much that my model predicted wrongly
+
+   # Formula -> Precision =  TP / (TP + FP) -- This can tell me how many of the users predicted as churned actually churned.
+   
+   # Formula -> F1 Score =  2 × (Precision × Recall) / (Precision + Recall)   -- Good overall measure when you need a balance between precision and recall.
+ 
+-- if my model accuracy is not satisfying, I would use other supervised ML modeling method such as linear regression, Decision trees.
+
+# -- end code -------------------------------------------------------------------------------------------------
+
+
+
+4. **Machine Learning:**
+   You are asked to build a customer segmentation model.
+
+   * Which algorithm(s) would you use and why?
+   * What preprocessing would you do before modeling?
+
+
+---
+
+### **Section C: Applied Case**
+
+5. **Business Case:**
+   A product team wants to understand what factors lead to user conversion (first purchase).
+
+   * What approach would you take to analyze this?
+   * How would you explain your findings to a non-technical stakeholder?
+
+---
+
