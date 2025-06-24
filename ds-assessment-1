@@ -99,15 +99,15 @@ roc_auc = roc_auc_score(y_test, y_proba)
 print(f"ROC-AUC Score: {roc_auc:.2f}")
 
 # ------------------------------------------
-How I will explain my code here:
+How I will evaluate my model performance:
 
 1. Confusion Matrix - Breaks down predictions into four categories :
 
 True Positive (TP): Predicted churned and actually churned
 
-False Positive (FP): Predicted churned but didn’t churn
+False Positive (FP): Predicted churned but didn’t churn at all
 
-True Negative (TN): Predicted not churned and didn’t churn
+True Negative (TN): Predicted not churned and didn’t churn 
 
 False Negative (FN): Predicted not churned but actually churned
 
@@ -131,8 +131,19 @@ False Negative (FN): Predicted not churned but actually churned
    You are asked to build a customer segmentation model.
 
    * Which algorithm(s) would you use and why?
+
+      I would used clustering method to segmentize customer into several grouping required. Probably use K-Means as a start as it is the fastest and 
+      effective to target numerical processes. I would feature engineered first my customer based on their demographics and behaviour. Through this 
+      features engineering then i feed it into model to train it into clustering model. 
+
    * What preprocessing would you do before modeling?
 
+      I would do features engineering to enable the model to understand my customers behavior better. For example, the last purchased date can be used
+      as one of the feature that can be engineered into several features such as Last 6 Month purchased (L6M) , L12M purchased, ever_purchased , 
+      first_time_purchase. 
+
+      I will also tackle for those missing value or null, by either feeds the value with the mode, or means of the column itself. Not to forget to 
+      standardize the data by performing normalization either using Standardscaler or MinMaxScaler based on case-basis.
 
 ---
 
@@ -145,4 +156,17 @@ False Negative (FN): Predicted not churned but actually churned
    * How would you explain your findings to a non-technical stakeholder?
 
 ---
+
+I will be performing funnel analysis through Google Analytics 4 (GA4) to understand the customer journey on where does the customer drop before the conversion.
+Through the funnel analysis, then we can identify the pain points whether the customer drop at "add_to_cart" or probably during "payment_process". 
+This allow product team to understand better whether the pain point related to the infrastructure of the product or customer side behavior where 
+it probably cause customer to drop off due to alot of process involved in order to complete the conversion.
+
+---
+
+I would be collecting the data to feed into the funnel analysis and create a dashboard for their reference along the way. From the dashboard then i will create the slide with
+my recommended next steps on where does the customer fall off in the journey for the stakeholder next action. It is also important to narrate a storyline
+where the stakeholder understands on what is happening throughout the customer journey through funnel analysis. Lesser technical jargon would be 
+better and great visualization for non-technical stakeholders can understand in one glance. 
+
 
