@@ -24,22 +24,158 @@ You are given the following mock datasets:
 1. **Problem Framing**
 
    * Define what “churn” means in this context
+
+CHURN in this context would be when a member did not transacted in the next 3 months. 
+
    * Describe the prediction goal and evaluation approach
+
+I will create a predictive model which can find the likelihood of a bonuslink member will churn. This model will be based
+on their past behaviour, demographics and engagement.
+
+For evaluation approach, I will be using :
+  a. F1-score : to get the accuracy and precision
+  b. ROC - AUC : Overall model performance, whether it is labelling the right bonuslink member with the likelihood. 
 
 2. **Feature Engineering**
 
    * Propose and compute meaningful features that may influence churn
+
+| Category   | Feature Example                           |
+| ---------- | ----------------------------------------- |
+| Recency    | Days since last transaction               |
+| Frequency  | Transactions per month                    |
+| Monetary   | Total spend, average spend                |
+| Tenure     | Days since signup                         |
+| Engagement | Logins, redemptions, app opens            |
+| Tier       | Membership tier (categorical)             |
+| Geography  | State , Region, Sub-Region                |
+
    * Handle missing or inconsistent data where applicable
+
+a. Handle null values in engagement metrics (fillna(0) for no activity)
+b. Convert timestamps to datetime and extract recent 3/6/12 month features, or create month_key features to denominate the month
+c. One-hot encode categorical features (tier, state, age group) - this to bin the customer type group (binning)
+
+
+## example code for above ✅: 
+
+# Recency
+df_features['days_since_last_txn'] = (snapshot_date - df_transactions.groupby('member_id')['timestamp'].max())
+
+# Frequency
+df_features['txn_count_3mo'] = df_transactions[df_transactions['timestamp'] >= snapshot_date - pd.Timedelta(days=90)].groupby('member_id').size()
+
+# Monetary
+df_features['avg_spend'] = df_transactions.groupby('member_id')['amount'].mean()
+
+# Engagement
+df_features = df_features.merge(engagement_df, on='member_id', how='left')
+df_features.fillna(0, inplace=True)
+
+## end example --------------------------
 
 3. **Modeling**
 
    * Build a simple predictive model using Python (e.g., logistic regression, tree-based model)
+
+# Step 0: Import Libraries for us to use, nowadays it is easy as the library are very much updated
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler # our normalization
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix, roc_curve
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Step 1: Here I just assuming that I have a cleaned dataset
+# df contains features and a target column "churn" (1 = churn, 0 = active)
+# Example features: ['days_since_last_txn', 'txn_count_3mo', 'avg_spend', 'logins', 'redemptions']
+
+# Separate features and target for training and test later on
+X = df.drop(columns=['member_id', 'churn'])
+y = df['churn']
+
+# This step is case-basis: to scale numeric features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Step 2: Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42, stratify=y)
+
+# Step 3: Train a Logistic Regression model ( The easiest and straightforward model)
+logreg = LogisticRegression(class_weight='balanced', random_state=42)
+logreg.fit(X_train, y_train)
+
+# Step 4: Evaluate the model that I have trained
+y_pred = logreg.predict(X_test)
+y_proba = logreg.predict_proba(X_test)[:, 1]
+
+print("🔍 Classification Report:\n", classification_report(y_test, y_pred))
+print("📈 ROC-AUC Score:", roc_auc_score(y_test, y_proba))
+
+# Plot ROC Curve
+fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+plt.figure()
+plt.plot(fpr, tpr, label="Logistic Regression (AUC = {:.2f})".format(roc_auc_score(y_test, y_proba)))
+plt.plot([0, 1], [0, 1], linestyle='--')
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curve")
+plt.legend()
+plt.show()
+
+
    * Evaluate model performance using appropriate metrics (ROC, precision-recall, etc.)
+
+1. Confusion Matrix - Breaks down predictions into four categories :
+
+  True Positive (TP): Predicted churned and actually churned
+
+  False Positive (FP): Predicted churned but didn’t churn at all
+
+  True Negative (TN): Predicted not churned and didn’t churn 
+
+  False Negative (FN): Predicted not churned but actually churned
+
+    # My model will be consider good if it have high TP and TN and low FP and FN.   
+
+2. Accuracy / Precision / F1-score: Evaluate balance between false positives and false negatives
+
+   # Formula -> Accuracy = (TP + TN) / (TP + FP + TN + FN) -- Will let me know that how much that my model predicted wrongly
+
+   # Formula -> Precision =  TP / (TP + FP) -- This can tell me how many of the users predicted as churned actually churned.
+   
+   # Formula -> F1 Score =  2 × (Precision × Recall) / (Precision + Recall)   -- Good overall measure when you need a balance between precision and recall.
+ 
+-- if my model accuracy is not satisfying, I would use other supervised ML modeling method such as linear regression, Decision trees.
+
 
 4. **Explainability & Business Implications**
 
    * Share key features influencing churn (e.g., SHAP, permutation importance)
+
+SHAP (SHapley Additive exPlanations) quantifies or showing in numerical on 
+how much each feature contributes to the prediction, for each individual data point.
+
+For example: 
+
+| Feature               | Interpretation                           |
+| --------------------- | ---------------------------------------- |
+| `days_since_last_txn` | Higher → more likely to churn            |
+| `logins`              | Higher engagement → less likely to churn |
+| `txn_count_3mo`       | Activity trend is key                    |
+| `tier`                | Lower tiers may churn more               |
+| `avg_spend`           | Low spenders may churn sooner            |
+
+
    * Recommend how the business can act on these insights
+
+1. Identify and prioritize high-risk churn segments for targeted retention strategies, such as offering tailored incentives (e.g., bonus points or personalized reminders).
+
+2. Design and deploy personalized engagement campaigns based on behavioral and transactional segmentation (e.g., "Loyal but inactive" or "Low-value, low-engagement" segments).
+
+3. Monitor key behavioral indicators over time to assess the effectiveness of marketing interventions and inform ongoing optimization efforts.
 
 ---
 
